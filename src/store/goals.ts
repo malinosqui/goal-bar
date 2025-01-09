@@ -6,6 +6,7 @@ export interface Goal {
   title: string;
   completed: boolean;
   createdAt: string;
+  impediments?: string;
 }
 
 interface GoalsStore {
@@ -15,6 +16,7 @@ interface GoalsStore {
   removeGoal: (id: string) => Promise<void>;
   clearGoals: () => Promise<void>;
   loadGoals: () => Promise<void>;
+  setImpediment: (id: string, impediment: string | null) => Promise<void>;
 }
 
 async function getGoalsPath() {
@@ -93,6 +95,7 @@ export const useGoalsStore = create<GoalsStore>()((set, get) => ({
         title,
         completed: false,
         createdAt: new Date().toISOString(),
+        impediments: undefined,
       };
       const currentGoals = get().goals;
       const newGoals = [...currentGoals, newGoal];
@@ -141,6 +144,30 @@ export const useGoalsStore = create<GoalsStore>()((set, get) => ({
       console.log('Goals cleared successfully');
     } catch (error) {
       console.error('Error in clearGoals:', error);
+      throw error;
+    }
+  },
+  setImpediment: async (id, impediment) => {
+    try {
+      console.log('Setting impediment for goal:', id, impediment);
+      const currentGoals = get().goals;
+      console.log('Current goals before update:', currentGoals);
+      
+      // Cria uma nova lista de metas com o impedimento atualizado
+      const newGoals = currentGoals.map((goal) => {
+        if (goal.id === id) {
+          console.log('Updating goal:', goal.title, 'with impediment:', impediment);
+          return { ...goal, impediments: impediment || undefined };
+        }
+        return goal;
+      });
+      
+      console.log('New goals after update:', newGoals);
+      await saveGoals(newGoals);
+      set({ goals: newGoals });
+      console.log('Goals state after set:', get().goals);
+    } catch (error) {
+      console.error('Error in setImpediment:', error);
       throw error;
     }
   },

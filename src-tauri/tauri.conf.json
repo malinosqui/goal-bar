@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "goal-bar",
+    "productName": "Goal Bar",
     "version": "0.1.0"
   },
   "tauri": {
@@ -36,7 +36,7 @@
     "macOSPrivateApi": true,
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
+      "category": "public.app-category.productivity",
       "copyright": "",
       "deb": {
         "depends": []
@@ -49,18 +49,20 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.goal-bar.app",
-      "longDescription": "",
+      "identifier": "com.goalbar.app",
+      "longDescription": "Um app simples para gerenciar suas metas semanais direto da barra de status",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
         "frameworks": [],
         "providerShortName": null,
-        "signingIdentity": null
+        "signingIdentity": null,
+        "minimumSystemVersion": "10.13",
+        "license": null
       },
       "resources": [],
-      "shortDescription": "",
-      "targets": "all",
+      "shortDescription": "Gerenciador de metas semanais",
+      "targets": ["dmg", "app"],
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",

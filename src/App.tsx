@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification } from '@mantine/core';
+import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification, Modal } from '@mantine/core';
 import { useGoalsStore } from './store/goals';
 import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
 
 function App() {
   const [newGoal, setNewGoal] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { goals, addGoal, toggleGoal, removeGoal, clearGoals, loadGoals } = useGoalsStore();
+  const [impedimentModal, setImpedimentModal] = useState<{ isOpen: boolean; goalId: string | null; currentValue: string; }>({
+    isOpen: false,
+    goalId: null,
+    currentValue: '',
+  });
+  const { goals, addGoal, toggleGoal, removeGoal, clearGoals, loadGoals, setImpediment } = useGoalsStore();
 
   // Carrega as metas ao iniciar
   useEffect(() => {
@@ -24,13 +30,38 @@ function App() {
       goals: goals.map(g => ({
         id: g.id,
         title: g.title,
-        completed: g.completed
+        completed: g.completed,
+        impediments: g.impediments
       }))
     }).catch(err => {
       console.error('Error updating menu:', err);
       setError('Erro ao atualizar menu. Por favor, tente novamente.');
     });
   }, [goals]);
+
+  // Escuta eventos do menu
+  useEffect(() => {
+    const unlisten = Promise.all([
+      listen('toggle_goal', (event) => {
+        const goalId = event.payload as string;
+        handleToggleGoal(goalId);
+      }),
+      listen('remove_impediment', (event) => {
+        const goalId = event.payload as string;
+        setImpediment(goalId, null);
+      }),
+      listen('add_impediment', (event) => {
+        const goalId = event.payload as string;
+        handleAddImpediment(goalId);
+      })
+    ]);
+
+    return () => {
+      unlisten.then(unlisteners => {
+        unlisteners.forEach(unlisten => unlisten());
+      });
+    };
+  }, []);
 
   const handleAddGoal = async () => {
     if (newGoal.trim()) {
@@ -81,11 +112,74 @@ function App() {
     }
   };
 
+  const handleAddImpediment = (id: string) => {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+
+    setImpedimentModal({
+      isOpen: true,
+      goalId: id,
+      currentValue: goal.impediments || '',
+    });
+  };
+
+  const handleSaveImpediment = async () => {
+    if (!impedimentModal.goalId) return;
+
+    try {
+      console.log('Setting impediment:', { id: impedimentModal.goalId, impediment: impedimentModal.currentValue });
+      await setImpediment(impedimentModal.goalId, impedimentModal.currentValue || null);
+      
+      // Atualiza o menu imediatamente com o novo estado
+      const updatedGoals = goals.map(g => 
+        g.id === impedimentModal.goalId ? { ...g, impediments: impedimentModal.currentValue || undefined } : g
+      );
+      
+      console.log('Updating menu with:', updatedGoals);
+      await invoke('update_tray_menu', { 
+        goals: updatedGoals.map(g => ({
+          id: g.id,
+          title: g.title,
+          completed: g.completed,
+          impediments: g.impediments
+        }))
+      });
+
+      setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' });
+    } catch (error) {
+      console.error('Error setting impediment:', error);
+      setError('Erro ao adicionar impedimento. Por favor, tente novamente.');
+    }
+  };
+
   const pendingGoals = goals.filter(goal => !goal.completed);
   const completedGoals = goals.filter(goal => goal.completed);
 
   return (
     <Container p="md" size="100%">
+      <Modal
+        opened={impedimentModal.isOpen}
+        onClose={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}
+        title="Adicionar Impedimento"
+      >
+        <Stack>
+          <TextInput
+            label="Impedimento"
+            placeholder="Digite o impedimento..."
+            value={impedimentModal.currentValue}
+            onChange={(e) => setImpedimentModal(prev => ({ ...prev, currentValue: e.target.value }))}
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveImpediment}>
+              Salvar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       <Stack gap="md">
         {error && (
           <Notification color="red" onClose={() => setError(null)}>
@@ -132,22 +226,46 @@ function App() {
             </Text>
             {pendingGoals.map((goal) => (
               <Paper key={goal.id} shadow="xs" p="md" withBorder>
-                <Group justify="space-between">
-                  <Group>
-                    <Checkbox
-                      checked={goal.completed}
-                      onChange={() => handleToggleGoal(goal.id)}
-                    />
-                    <Text>{goal.title}</Text>
+                <Stack gap="xs">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                      <Checkbox
+                        checked={goal.completed}
+                        onChange={() => handleToggleGoal(goal.id)}
+                      />
+                      <Text lineClamp={2} style={{ flex: 1 }}>
+                        {goal.title}
+                      </Text>
+                    </Group>
+                    <Group gap="xs" wrap="nowrap">
+                      <ActionIcon
+                        color={goal.impediments ? 'red' : 'gray'}
+                        variant="subtle"
+                        onClick={() => handleAddImpediment(goal.id)}
+                        title={goal.impediments ? 'Editar impedimento' : 'Adicionar impedimento'}
+                      >
+                        🚫
+                      </ActionIcon>
+                      <ActionIcon
+                        color="red"
+                        variant="subtle"
+                        onClick={() => handleRemoveGoal(goal.id)}
+                      >
+                        ×
+                      </ActionIcon>
+                    </Group>
                   </Group>
-                  <ActionIcon
-                    color="red"
-                    variant="subtle"
-                    onClick={() => handleRemoveGoal(goal.id)}
-                  >
-                    ×
-                  </ActionIcon>
-                </Group>
+                  {goal.impediments && (
+                    <Paper bg="red.0" p="xs" radius="sm">
+                      <Group gap="xs" wrap="nowrap">
+                        <Text size="sm" c="red" fw={500}>Bloqueado:</Text>
+                        <Text size="sm" c="red.7" style={{ flex: 1 }}>
+                          {goal.impediments}
+                        </Text>
+                      </Group>
+                    </Paper>
+                  )}
+                </Stack>
               </Paper>
             ))}
           </Stack>
@@ -160,13 +278,13 @@ function App() {
             </Text>
             {completedGoals.map((goal) => (
               <Paper key={goal.id} shadow="xs" p="md" withBorder>
-                <Group justify="space-between">
-                  <Group>
+                <Group justify="space-between" wrap="nowrap">
+                  <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
                     <Checkbox
                       checked={goal.completed}
                       onChange={() => handleToggleGoal(goal.id)}
                     />
-                    <Text td="line-through">
+                    <Text td="line-through" c="dimmed" lineClamp={2} style={{ flex: 1 }}>
                       {goal.title}
                     </Text>
                   </Group>

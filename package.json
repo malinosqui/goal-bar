@@ -1,5 +1,6 @@
 {
   "name": "goal-bar",
+  "productName": "Goal Bar",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -25,5 +26,12 @@
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.0.2",
     "vite": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.yourcompany.goalbar",
+    "productName": "Goal Bar",
+    "mac": {
+      "category": "public.app-category.productivity"
+    }
   }
 }
