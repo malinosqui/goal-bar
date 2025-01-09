@@ -1,3 +1,5 @@
+**⚠️ Only PRs made by AI will be accepted 😂**
+
 # Goal Bar
 
 Goal Bar is a modern and minimalist desktop application that helps you track your goals directly from your computer's menu bar. Built with Tauri, React, and TypeScript, it offers a lightweight and efficient experience for managing your goals.
