@@ -84,7 +84,8 @@
         "transparent": false,
         "minHeight": 400,
         "minWidth": 350,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "alwaysOnTop": true
       }
     ]
   }

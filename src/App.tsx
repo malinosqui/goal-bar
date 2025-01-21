@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification, Modal } from '@mantine/core';
+import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification, Modal, MantineProvider } from '@mantine/core';
 import { useGoalsStore } from './store/goals';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
@@ -156,158 +156,211 @@ function App() {
   const completedGoals = goals.filter(goal => goal.completed);
 
   return (
-    <Container p="md" size="100%">
-      <Modal
-        opened={impedimentModal.isOpen}
-        onClose={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}
-        title="Adicionar Impedimento"
-      >
-        <Stack>
-          <TextInput
-            label="Impedimento"
-            placeholder="Digite o impedimento..."
-            value={impedimentModal.currentValue}
-            onChange={(e) => setImpedimentModal(prev => ({ ...prev, currentValue: e.target.value }))}
-          />
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveImpediment}>
-              Salvar
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Stack gap="md">
-        {error && (
-          <Notification color="red" onClose={() => setError(null)}>
-            {error}
-          </Notification>
-        )}
-
-        <Group justify="space-between" align="center">
-          <Title order={4}>Metas da Semana</Title>
-          <Menu shadow="md" width={200} position="bottom-end">
-            <Menu.Target>
-              <ActionIcon variant="subtle" color="gray" size="sm">
-                •••
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Ações</Menu.Label>
-              <Menu.Item color="red" onClick={handleClearGoals}>
-                Limpar todas as metas
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
-
-        <Paper shadow="xs" p="md">
-          <Group gap="sm">
+    <MantineProvider
+      theme={{
+        primaryColor: 'blue',
+        components: {
+          Button: {
+            styles: {
+              root: {
+                borderRadius: '6px',
+                fontWeight: 500,
+              }
+            }
+          },
+          TextInput: {
+            styles: {
+              input: {
+                borderRadius: '6px',
+                '&:focus': {
+                  borderColor: 'var(--mantine-color-blue-6)',
+                  boxShadow: '0 0 0 3px rgba(0, 113, 227, 0.2)',
+                }
+              }
+            }
+          },
+          Paper: {
+            styles: {
+              root: {
+                borderRadius: '10px',
+                border: '1px solid var(--mantine-color-gray-3)',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              }
+            }
+          },
+          Modal: {
+            styles: {
+              content: {
+                borderRadius: '12px',
+              },
+              header: {
+                borderBottom: '1px solid var(--mantine-color-gray-2)',
+                paddingBottom: '16px',
+              }
+            }
+          },
+          Checkbox: {
+            styles: {
+              input: {
+                borderRadius: '4px',
+                '&:checked': {
+                  backgroundColor: 'var(--mantine-color-blue-6)',
+                  borderColor: 'var(--mantine-color-blue-6)',
+                }
+              }
+            }
+          }
+        }
+      }}
+    >
+      <Container p="md" size="100%" style={{ maxWidth: '800px' }}>
+        <Modal
+          opened={impedimentModal.isOpen}
+          onClose={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}
+          title="Adicionar Impedimento"
+          radius="md"
+          padding="lg"
+        >
+          <Stack>
             <TextInput
-              placeholder="Adicionar nova meta..."
-              value={newGoal}
-              onChange={(e) => setNewGoal(e.target.value)}
-              onKeyPress={handleKeyPress}
-              style={{ flex: 1 }}
+              label="Impedimento"
+              placeholder="Digite o impedimento..."
+              value={impedimentModal.currentValue}
+              onChange={(e) => setImpedimentModal(prev => ({ ...prev, currentValue: e.target.value }))}
+              size="md"
             />
-            <Button onClick={handleAddGoal} variant="filled" color="blue">
-              Adicionar
-            </Button>
-          </Group>
-        </Paper>
+            <Group justify="flex-end" mt="md">
+              <Button variant="subtle" onClick={() => setImpedimentModal({ isOpen: false, goalId: null, currentValue: '' })}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveImpediment}>
+                Salvar
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
 
-        {pendingGoals.length > 0 && (
-          <Stack gap="xs">
-            <Text size="sm" fw={500} c="dimmed">
-              Pendentes
-            </Text>
-            {pendingGoals.map((goal) => (
-              <Paper key={goal.id} shadow="xs" p="md" withBorder>
-                <Stack gap="xs">
+        <Stack gap="lg">
+          {error && (
+            <Notification color="red" onClose={() => setError(null)} radius="md">
+              {error}
+            </Notification>
+          )}
+
+          <Group justify="space-between" align="center">
+            <Title order={4} style={{ fontWeight: 600 }}>Metas da Semana</Title>
+            <Menu shadow="md" width={200} position="bottom-end">
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" size="sm">
+                  •••
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Ações</Menu.Label>
+                <Menu.Item color="red" onClick={handleClearGoals}>
+                  Limpar todas as metas
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+
+          <Paper shadow="xs" p="lg" withBorder>
+            <Group gap="sm">
+              <TextInput
+                placeholder="Adicionar nova meta..."
+                value={newGoal}
+                onChange={(e) => setNewGoal(e.target.value)}
+                onKeyPress={handleKeyPress}
+                style={{ flex: 1 }}
+                size="md"
+              />
+              <Button onClick={handleAddGoal} variant="filled" color="blue" size="md">
+                Adicionar
+              </Button>
+            </Group>
+          </Paper>
+
+          {pendingGoals.length > 0 && (
+            <Stack gap="md">
+              <Text size="sm" fw={600} c="dimmed" style={{ letterSpacing: '0.3px' }}>
+                Pendentes
+              </Text>
+              {pendingGoals.map((goal) => (
+                <Paper key={goal.id} shadow="xs" p="md" withBorder>
+                  <Stack gap="xs">
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                        <Checkbox
+                          checked={goal.completed}
+                          onChange={() => handleToggleGoal(goal.id)}
+                          size="md"
+                        />
+                        <Text lineClamp={2} style={{ flex: 1 }}>
+                          {goal.title}
+                        </Text>
+                      </Group>
+                      <Group gap="xs" wrap="nowrap">
+                        <ActionIcon
+                          color={goal.impediments ? 'red' : 'gray'}
+                          variant="subtle"
+                          onClick={() => handleAddImpediment(goal.id)}
+                          title={goal.impediments ? 'Editar impedimento' : 'Adicionar impedimento'}
+                        >
+                          🚫
+                        </ActionIcon>
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => handleRemoveGoal(goal.id)}
+                        >
+                          ✕
+                        </ActionIcon>
+                      </Group>
+                    </Group>
+                    {goal.impediments && (
+                      <Text size="sm" c="red" style={{ marginLeft: '32px' }}>
+                        Impedimento: {goal.impediments}
+                      </Text>
+                    )}
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+
+          {completedGoals.length > 0 && (
+            <Stack gap="md">
+              <Text size="sm" fw={600} c="dimmed" style={{ letterSpacing: '0.3px' }}>
+                Concluídas
+              </Text>
+              {completedGoals.map((goal) => (
+                <Paper key={goal.id} shadow="xs" p="md" withBorder>
                   <Group justify="space-between" wrap="nowrap">
                     <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
                       <Checkbox
                         checked={goal.completed}
                         onChange={() => handleToggleGoal(goal.id)}
+                        size="md"
                       />
-                      <Text lineClamp={2} style={{ flex: 1 }}>
+                      <Text lineClamp={2} style={{ flex: 1, textDecoration: 'line-through', color: 'var(--mantine-color-gray-6)' }}>
                         {goal.title}
                       </Text>
                     </Group>
-                    <Group gap="xs" wrap="nowrap">
-                      <ActionIcon
-                        color={goal.impediments ? 'red' : 'gray'}
-                        variant="subtle"
-                        onClick={() => handleAddImpediment(goal.id)}
-                        title={goal.impediments ? 'Editar impedimento' : 'Adicionar impedimento'}
-                      >
-                        🚫
-                      </ActionIcon>
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={() => handleRemoveGoal(goal.id)}
-                      >
-                        ×
-                      </ActionIcon>
-                    </Group>
+                    <ActionIcon
+                      color="red"
+                      variant="subtle"
+                      onClick={() => handleRemoveGoal(goal.id)}
+                    >
+                      ✕
+                    </ActionIcon>
                   </Group>
-                  {goal.impediments && (
-                    <Paper bg="red.0" p="xs" radius="sm">
-                      <Group gap="xs" wrap="nowrap">
-                        <Text size="sm" c="red" fw={500}>Bloqueado:</Text>
-                        <Text size="sm" c="red.7" style={{ flex: 1 }}>
-                          {goal.impediments}
-                        </Text>
-                      </Group>
-                    </Paper>
-                  )}
-                </Stack>
-              </Paper>
-            ))}
-          </Stack>
-        )}
-
-        {completedGoals.length > 0 && (
-          <Stack gap="xs">
-            <Text size="sm" fw={500} c="dimmed">
-              Concluídas
-            </Text>
-            {completedGoals.map((goal) => (
-              <Paper key={goal.id} shadow="xs" p="md" withBorder>
-                <Group justify="space-between" wrap="nowrap">
-                  <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-                    <Checkbox
-                      checked={goal.completed}
-                      onChange={() => handleToggleGoal(goal.id)}
-                    />
-                    <Text td="line-through" c="dimmed" lineClamp={2} style={{ flex: 1 }}>
-                      {goal.title}
-                    </Text>
-                  </Group>
-                  <ActionIcon
-                    color="red"
-                    variant="subtle"
-                    onClick={() => handleRemoveGoal(goal.id)}
-                  >
-                    ×
-                  </ActionIcon>
-                </Group>
-              </Paper>
-            ))}
-          </Stack>
-        )}
-
-        {goals.length === 0 && (
-          <Text c="dimmed" ta="center" size="sm" mt={20}>
-            Nenhuma meta adicionada ainda. Comece adicionando sua primeira meta!
-          </Text>
-        )}
-      </Stack>
-    </Container>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </Container>
+    </MantineProvider>
   );
 }
 
