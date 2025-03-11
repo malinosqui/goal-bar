@@ -19,6 +19,7 @@ struct Goal {
     title: String,
     completed: bool,
     impediments: Option<String>,
+    priority: String,
 }
 
 fn create_menu(goals: &[Goal]) -> SystemTrayMenu {
@@ -49,10 +50,17 @@ fn create_menu(goals: &[Goal]) -> SystemTrayMenu {
                 ))
             };
 
+            let priority_emoji = match goal.priority.as_str() {
+                "low" => "🔵",
+                "medium" => "🟡",
+                "high" => "🔴",
+                _ => "⚪",
+            };
+
             let title = if let Some(imp) = &goal.impediments {
-                format!("🚫 {} (Bloqueado: {})", goal.title, imp)
+                format!("{} {} (Bloqueado: {})", priority_emoji, goal.title, imp)
             } else {
-                goal.title.clone()
+                format!("{} {}", priority_emoji, goal.title)
             };
 
             menu = menu.add_submenu(SystemTraySubmenu::new(title, submenu));
@@ -74,8 +82,15 @@ fn create_menu(goals: &[Goal]) -> SystemTrayMenu {
                     "↩️ Desfazer conclusão"
                 ));
 
+            let priority_emoji = match goal.priority.as_str() {
+                "low" => "🔵",
+                "medium" => "🟡",
+                "high" => "🔴",
+                _ => "⚪",
+            };
+
             menu = menu.add_submenu(SystemTraySubmenu::new(
-                format!("✓ {}", goal.title),
+                format!("✓ {} {}", priority_emoji, goal.title),
                 submenu
             ));
         }

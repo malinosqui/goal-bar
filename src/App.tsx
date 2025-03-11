@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification, Modal, MantineProvider } from '@mantine/core';
+import { Container, TextInput, Button, Paper, Text, Checkbox, Group, Title, Stack, ActionIcon, Menu, Notification, Modal, MantineProvider, Select } from '@mantine/core';
 import { useGoalsStore } from './store/goals';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 
 function App() {
   const [newGoal, setNewGoal] = useState('');
+  const [newGoalPriority, setNewGoalPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [error, setError] = useState<string | null>(null);
-  const [impedimentModal, setImpedimentModal] = useState<{ isOpen: boolean; goalId: string | null; currentValue: string; }>({
+  const [impedimentModal, setImpedimentModal] = useState<{
+    isOpen: boolean;
+    goalId: string | null;
+    currentValue: string;
+  }>({
     isOpen: false,
     goalId: null,
     currentValue: '',
   });
-  const { goals, addGoal, toggleGoal, removeGoal, clearGoals, loadGoals, setImpediment } = useGoalsStore();
+  const { goals, addGoal, toggleGoal, removeGoal, clearGoals, loadGoals, setImpediment, setPriority } = useGoalsStore();
 
   // Carrega as metas ao iniciar
   useEffect(() => {
@@ -31,7 +36,8 @@ function App() {
         id: g.id,
         title: g.title,
         completed: g.completed,
-        impediments: g.impediments
+        impediments: g.impediments,
+        priority: g.priority
       }))
     }).catch(err => {
       console.error('Error updating menu:', err);
@@ -67,8 +73,9 @@ function App() {
     if (newGoal.trim()) {
       console.log('Adding goal:', newGoal);
       try {
-        await addGoal(newGoal.trim());
+        await addGoal(newGoal.trim(), newGoalPriority);
         setNewGoal('');
+        setNewGoalPriority('medium');
       } catch (error) {
         console.error('Error adding goal:', error);
         setError('Erro ao adicionar meta. Por favor, tente novamente.');
@@ -141,7 +148,8 @@ function App() {
           id: g.id,
           title: g.title,
           completed: g.completed,
-          impediments: g.impediments
+          impediments: g.impediments,
+          priority: g.priority
         }))
       });
 
@@ -154,6 +162,32 @@ function App() {
 
   const pendingGoals = goals.filter(goal => !goal.completed);
   const completedGoals = goals.filter(goal => goal.completed);
+
+  const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
+    switch (priority) {
+      case 'low':
+        return 'blue';
+      case 'medium':
+        return 'yellow';
+      case 'high':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
+  const getPriorityEmoji = (priority: 'low' | 'medium' | 'high') => {
+    switch (priority) {
+      case 'low':
+        return '🔵';
+      case 'medium':
+        return '🟡';
+      case 'high':
+        return '🔴';
+      default:
+        return '⚪';
+    }
+  };
 
   return (
     <MantineProvider
@@ -265,19 +299,32 @@ function App() {
           </Group>
 
           <Paper shadow="xs" p="lg" withBorder>
-            <Group gap="sm">
+            <Stack gap="sm">
               <TextInput
                 placeholder="Adicionar nova meta..."
                 value={newGoal}
                 onChange={(e) => setNewGoal(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddGoal()}
                 style={{ flex: 1 }}
                 size="md"
               />
-              <Button onClick={handleAddGoal} variant="filled" color="blue" size="md">
-                Adicionar
-              </Button>
-            </Group>
+              <Group>
+                <Select
+                  value={newGoalPriority}
+                  onChange={(value) => setNewGoalPriority(value as 'low' | 'medium' | 'high')}
+                  data={[
+                    { value: 'low', label: '🔵 Baixa' },
+                    { value: 'medium', label: '🟡 Média' },
+                    { value: 'high', label: '🔴 Alta' },
+                  ]}
+                  style={{ width: '150px' }}
+                  size="md"
+                />
+                <Button onClick={handleAddGoal} variant="filled" color="blue" size="md" style={{ flex: 1 }}>
+                  Adicionar
+                </Button>
+              </Group>
+            </Stack>
           </Paper>
 
           {pendingGoals.length > 0 && (
@@ -300,6 +347,29 @@ function App() {
                         </Text>
                       </Group>
                       <Group gap="xs" wrap="nowrap">
+                        <Menu shadow="md" position="bottom-end">
+                          <Menu.Target>
+                            <ActionIcon
+                              color={getPriorityColor(goal.priority)}
+                              variant="subtle"
+                              title="Alterar prioridade"
+                            >
+                              {getPriorityEmoji(goal.priority)}
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Label>Prioridade</Menu.Label>
+                            <Menu.Item onClick={() => setPriority(goal.id, 'low')}>
+                              🔵 Baixa
+                            </Menu.Item>
+                            <Menu.Item onClick={() => setPriority(goal.id, 'medium')}>
+                              🟡 Média
+                            </Menu.Item>
+                            <Menu.Item onClick={() => setPriority(goal.id, 'high')}>
+                              🔴 Alta
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
                         <ActionIcon
                           color={goal.impediments ? 'red' : 'gray'}
                           variant="subtle"

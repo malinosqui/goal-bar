@@ -7,16 +7,18 @@ export interface Goal {
   completed: boolean;
   createdAt: string;
   impediments?: string;
+  priority: 'low' | 'medium' | 'high';
 }
 
 interface GoalsStore {
   goals: Goal[];
-  addGoal: (title: string) => Promise<void>;
+  addGoal: (title: string, priority: Goal['priority']) => Promise<void>;
   toggleGoal: (id: string) => Promise<void>;
   removeGoal: (id: string) => Promise<void>;
   clearGoals: () => Promise<void>;
   loadGoals: () => Promise<void>;
   setImpediment: (id: string, impediment: string | null) => Promise<void>;
+  setPriority: (id: string, priority: Goal['priority']) => Promise<void>;
 }
 
 async function getGoalsPath() {
@@ -45,32 +47,36 @@ async function saveGoals(goals: Goal[]) {
   }
 }
 
-async function loadSavedGoals(): Promise<Goal[]> {
+async function loadGoalsFromFile(): Promise<Goal[]> {
   try {
     const filePath = await getGoalsPath();
     const exists = await fs.exists(filePath);
-    console.log('Goals file exists:', exists);
     
     if (!exists) {
-      console.log('No goals file found, creating empty file');
+      console.log('Goals file does not exist, creating empty file');
       await saveGoals([]);
       return [];
     }
-    
+
     const content = await fs.readTextFile(filePath);
-    if (!content.trim()) {
-      return [];
-    }
-    
     const goals = JSON.parse(content);
-    console.log('Loaded goals:', goals);
-    return goals;
+    
+    // Migração: adiciona prioridade padrão para metas antigas
+    const migratedGoals = goals.map((goal: any) => ({
+      ...goal,
+      priority: goal.priority || 'medium', // Define 'medium' como prioridade padrão
+    }));
+
+    // Se houve alguma migração, salva as metas atualizadas
+    if (goals.some((goal: any) => !goal.priority)) {
+      console.log('Migrating goals to add priority field');
+      await saveGoals(migratedGoals);
+    }
+
+    return migratedGoals;
   } catch (error) {
     console.error('Error loading goals:', error);
-    if (error instanceof Error) {
-      throw new Error(`Erro ao carregar metas: ${error.message}`);
-    }
-    throw new Error('Erro ao carregar metas');
+    throw new Error('Não foi possível carregar as metas');
   }
 }
 
@@ -78,28 +84,26 @@ export const useGoalsStore = create<GoalsStore>()((set, get) => ({
   goals: [],
   loadGoals: async () => {
     try {
-      console.log('Loading goals...');
-      const goals = await loadSavedGoals();
-      console.log('Setting goals in store:', goals);
+      const goals = await loadGoalsFromFile();
       set({ goals });
+      console.log('Goals loaded successfully');
     } catch (error) {
       console.error('Error in loadGoals:', error);
       throw error;
     }
   },
-  addGoal: async (title) => {
+  addGoal: async (title, priority = 'medium') => {
     try {
-      console.log('Adding new goal:', title);
-      const newGoal = {
+      console.log('Adding goal:', { title, priority });
+      const newGoal: Goal = {
         id: crypto.randomUUID(),
         title,
         completed: false,
         createdAt: new Date().toISOString(),
-        impediments: undefined,
+        priority,
       };
       const currentGoals = get().goals;
       const newGoals = [...currentGoals, newGoal];
-      console.log('New goals array:', newGoals);
       await saveGoals(newGoals);
       set({ goals: newGoals });
       console.log('Goal added successfully');
@@ -168,6 +172,21 @@ export const useGoalsStore = create<GoalsStore>()((set, get) => ({
       console.log('Goals state after set:', get().goals);
     } catch (error) {
       console.error('Error in setImpediment:', error);
+      throw error;
+    }
+  },
+  setPriority: async (id, priority) => {
+    try {
+      console.log('Setting priority for goal:', id, priority);
+      const currentGoals = get().goals;
+      const newGoals = currentGoals.map((goal) =>
+        goal.id === id ? { ...goal, priority } : goal
+      );
+      await saveGoals(newGoals);
+      set({ goals: newGoals });
+      console.log('Priority updated successfully');
+    } catch (error) {
+      console.error('Error in setPriority:', error);
       throw error;
     }
   },
